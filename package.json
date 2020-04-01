@@ -1,0 +1,30 @@
+{
+  "name": "discord-itunes",
+  "version": "0.9.0",
+  "description": "Tell all your Discord friends what you hear on iTunes.",
+  "main": "index.js",
+  "keywords": [
+    "itunes",
+    "discord",
+    "rich",
+    "presence",
+    "richpresence",
+    "macos",
+    "darwin",
+    "catalina"
+  ],
+  "author": "Jan Runte",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nimayneb/discord-itunes.git"
+  },
+  "dependencies": {
+    "applescript": "^1.0.0",
+    "discord-rpc": "^3.1.0",
+    "discord.js": "^12.1.0"
+  },
+  "scripts": {
+    "watch": "node index.js"
+  }
+}

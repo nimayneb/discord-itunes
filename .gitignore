@@ -1,0 +1,20 @@
+# log files
+logs
+*.log
+npm-debug.log*
+
+# dependency directories
+node_modules/
+package-lock.json
+
+# archive files
+*.tgz
+*.gz
+*.zip
+*.tar
+
+# macOS files
+.DS_Store
+
+# PhpStorm files
+.idea
