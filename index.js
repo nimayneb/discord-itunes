@@ -98,7 +98,7 @@ async function sendPlayingToDiscord(trackName, artistName, albumName) {
     let startTimestamp = now - (start * 1000);
 
     await discordSend(
-        `🎵 ${trackName} [🕘 ${end}]`,
+        `🎵 ${trackName} 🕘${end}`,
         `👤 ${artistName}`,
         `💿 ${albumName}`,
         startTimestamp
@@ -234,7 +234,7 @@ async function fetchStation(stationName) {
                 }
             }
         });
-    } else {
+    } else if (currentStationId) {
         await fetchTrackData();
     }
 }
@@ -270,15 +270,14 @@ async function checkCurrentApplicationState() {
     let albumName = await runAppleScript(`tell application "${applicationName}" to get album of current track`);
     let current = JSON.stringify({trackName: trackNameOrStationName, artistName, albumName});
 
-    if (('' !== trackNameOrStationName && '' !== artistName && '' !== albumName) && (current !== previousPlaying)) {
+    if ((trackNameOrStationName && artistName && albumName) && (current !== previousPlaying)) {
         requestedClientId = iTunesMusicClientId;
         previousStreaming = '';
         previousPlaying = current;
 
         await sendPlayingToDiscord(trackNameOrStationName, artistName, albumName);
-    } else {
+    } else if (trackNameOrStationName && !artistName && !albumName) {
         previousPlaying = '';
-
         await fetchStation(trackNameOrStationName);
     }
 
@@ -317,6 +316,8 @@ async function setActivity() {
                 console.log('Switching Discord connection...');
 
                 activatedClientId = requestedClientId;
+                currentStationId = '';
+                currentStationName = '';
 
                 closeConnection();
             } else {
@@ -351,8 +352,8 @@ const radioApiKey = '6d3a0b9a08fd4b6dce0f49e9a72a972675d26a14';
 let applicationName = getNameOfMusicApplication();
 let discordClient = initializeRemoteDiscordClient();
 let requestedClientId = iTunesMusicClientId;
-let currentStationName;
-let currentStationId;
+let currentStationName = '';
+let currentStationId = '';
 let activatedClientId = requestedClientId;
 
 let previousPlaying = '';
