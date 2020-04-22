@@ -70,7 +70,7 @@ async function fetchUrl(url) {
 
             return response.text();
         })
-    ;
+        ;
 }
 
 /**
@@ -129,7 +129,7 @@ async function sendListeningToDiscord(trackName, artistName, albumName) {
 
     console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}"...`);
 
-    await discordSend(`🎵 ${trackName}`,  `👤 ${artistName}`, imageText, startTimestamp);
+    await discordSend(`🎵 ${trackName}`, `👤 ${artistName}`, imageText, startTimestamp);
 }
 
 /**
@@ -339,9 +339,9 @@ async function setActivity() {
     }
 }
 
-/************************\
+/************************
  *  Starts Application  *
- \************************/
+ ************************/
 
 const appleScript = require("applescript");
 const fetch = require('node-fetch');
@@ -361,7 +361,8 @@ let previousStreaming = '';
 let loggedIn = false;
 
 /**
- * TODO: prepared application version to use it for "smallImageText"
+ * TODO:
+ * - recall setInterval (1s for playing, 5s for streaming)
  *
  * @see checkCurrentApplicationState
  */
