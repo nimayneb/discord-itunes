@@ -22,9 +22,11 @@ Usage:
 Features:
 ---------
 
-- Show author, album, title w/ track time
-- Show current elapsed time
-- Only send the activity on changes
+- Radio only: Shows artist, title and if available album too 
+- Music only: Shows artist, album, title w/ track time
+- Always: Shows current elapsed time
+- Sends activities to Discord on changes only
+- Disconnects from Discord if nothing is playing or streaming
 
 Appendix
 ========
@@ -34,11 +36,13 @@ Wishlist:
 
 - Show cover of album, not iTunes logo (Issue: https://github.com/discord/discord-rpc/issues/70)
 - Show link to iTunes page
+- Show link to Streaming page
 
 Discord Application 
 -------------------
 
 URL: https://discordapp.com/developers/applications/695005084505079848/information
+URL: https://discordapp.com/developers/applications/702431764781465650/information
 
 Discord - Rich Presence - Assets (w/ authorization)
 ---------------------------------------------------

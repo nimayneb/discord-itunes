@@ -7,7 +7,7 @@
  *
  * @returns {Promise<string>}
  */
-async function runAppleScript(script) {
+function runAppleScript(script) {
     try {
         return new Promise((resolve, reject) => {
             appleScript.execString(script, (error, returns) => {
@@ -17,10 +17,9 @@ async function runAppleScript(script) {
                 resolve(returns);
             });
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error(error);
-        return '';
+        return null;
     }
 }
 
@@ -32,7 +31,7 @@ async function runAppleScript(script) {
  *
  * @returns {string}
  */
-function getNameOfItunes() {
+function getNameOfMusicApplication() {
     return (parseInt(require("os").release().split(".")[0]) >= 19) ? 'Music' : 'iTunes';
 }
 
@@ -52,9 +51,204 @@ function initializeRemoteDiscordClient() {
     const discordRemoteProtocol = require("discord-rpc");
 
     return new discordRemoteProtocol.Client({transport: 'ipc'})
-        .on('connected', async () => {
-            await checkCurrentApplicationState();
+        .on('connected', async () => await checkCurrentApplicationState());
+}
+
+/**
+ * Fetches data content from URL and fails if status code is not 200.
+ *
+ * @param url
+ *
+ * @returns {Promise<any>}
+ */
+async function fetchUrl(url) {
+    return await fetch(url, {redirect: 'manual'})
+        .then(function (response) {
+            if (200 !== response.status) {
+                throw new Error('not OK');
+            }
+
+            return response.text();
+        })
+    ;
+}
+
+/**
+ * Send specific data for playing mode (Apple Music) to Discord.
+ *
+ * Read the additional information from application of current track:
+ * - Track total time
+ * - Elapsed time (1)
+ *
+ * (1) Discord automatically continues the elapsed time until we send something new.
+ *
+ * @param trackName
+ * @param artistName
+ * @param albumName
+ *
+ * @returns {Promise<void>}
+ */
+async function sendPlayingToDiscord(trackName, artistName, albumName) {
+    console.log(`Now playing "${trackName}" from "${artistName}" by "${albumName}"...`);
+
+    let start = await runAppleScript(`tell application "${applicationName}" to get player position`);
+    let end = await runAppleScript(`tell application "${applicationName}" to get time of current track`);
+    let now = Number(new Date());
+
+    let startTimestamp = now - (start * 1000);
+
+    await discordSend(
+        `🎵 ${trackName} [${end}]`,
+        `👤 ${artistName}`,
+        `💿 ${albumName}`,
+        startTimestamp
+    );
+}
+
+/**
+ * Send specific data for listening mode (Apple Radio) to Discord.
+ *
+ * Add additional information:
+ * - Elapsed time (1)
+ *
+ * (1) Discord automatically continues the elapsed time until we send something new.
+ *
+ * @param trackName
+ * @param artistName
+ * @param albumName
+ *
+ * @returns {Promise<void>}
+ */
+async function sendListeningToDiscord(trackName, artistName, albumName) {
+    let startTimestamp = Number(new Date());
+    let imageText = `📻 ${currentStationName}`;
+
+    if (albumName) {
+        imageText = albumName;
+    }
+
+    console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}"...`);
+
+    await discordSend(`🎵 ${trackName}`,  `👤 ${artistName}`, `💿 ${imageText}`, startTimestamp);
+}
+
+/**
+ * Send data to Discord Rich Presence API
+ *
+ * @param details
+ * @param state
+ * @param imageText
+ * @param startTimestamp
+ *
+ * @returns {Promise<void>}
+ */
+async function discordSend(details, state, imageText, startTimestamp) {
+    await discordClient.setActivity({
+        details: details,
+        state: state,
+        startTimestamp: startTimestamp,
+        largeImageKey: 'itunes',
+        largeImageText: imageText,
+        smallImageKey: 'github',
+        smallImageText: 'nimayneb/discord-itunes'
+    }).catch((error) => {
+        console.error(error);
+    });
+}
+
+/**
+ * Fetches information about the current track of the current streaming station.
+ *
+ * Strategy: Uses the JSON-API from "radio.net" and gets the only streaming track.
+ *
+ * GET: https://api.radio.net/info/v2/search/nowplaying ? apikey=...& numberoftitles=1 & station= ...
+ * [
+ *   {
+ *             songName: use it for view in "details"
+ *            albumName: use it for view in "state"
+ *      coverImageUrl30: ignore
+ *     coverImageUrl100: ignore
+ *          idBroadcast: ignore
+ *     mediaReleaseDate: ignore
+ *                genre: ignore
+ *      coverImageUrl60: ignore
+ *          streamTitle: split into artist name and track name if songName and artistName are empty.
+ *           artistName: use it for view in "largeImageText"
+ *        purchaseInfos: ignore
+ *               source: ignore
+ *   }
+ * ]
+ *
+ * TODO:
+ * - show streaming broadcast logo
+ *
+ * @returns {Promise<void>}
+ */
+async function fetchTrackData() {
+    let nowPlayingOnStation = `https://api.radio.net/info/v2/search/nowplaying?apikey=${radioApiKey}&numberoftitles=1&station=${currentStationId}`;
+
+    fetchUrl(nowPlayingOnStation).then(function (response) {
+        let data = JSON.parse(response);
+        let trackData = data[0];
+        let streamTitle = trackData.streamTitle.split(' - ', 2);
+        let artistName = trackData.artistName ? trackData.artistName : (streamTitle[0] ? streamTitle[0] : 'N/A');
+        let trackName = trackData.songName ? trackData.songName : (streamTitle[1] ? streamTitle[1] : 'N/A');
+        let albumName = trackData.albumName ? trackData.albumName : '';
+        let current = JSON.stringify({trackName: trackName, artistName, albumName});
+
+        if (current !== previousStreaming) {
+            previousStreaming = current;
+            sendListeningToDiscord(trackName, artistName, albumName);
+        }
+    });
+}
+
+/**
+ * Fetches information about the streaming station powered by "radio.net".
+ *
+ * Strategy: Grabs only "StationId" within JavaScript on Website (search for "var stationPage = { id: ... }").
+ *
+ * @param stationName
+ *
+ * @returns {Promise<void>}
+ */
+async function fetchStation(stationName) {
+    if (currentStationName !== stationName) {
+        currentStationName = stationName;
+
+        let stationUrl = `https://www.radio.net/s/${stationName.replace(/[ _]/g, '').toLowerCase()}`;
+
+        fetchUrl(stationUrl).then(await function (stationData) {
+            let matches = stationData.replace(/\s/g, '|').match(
+                /var\|+stationPage\|*=\|*\{.*[\\,]?id:\|*'(?<stationId>[0-9]+)'.*};/
+            );
+            let stationId = matches[1];
+
+            if (stationId) {
+                console.log(`Listening streaming broadcast "${stationName}"...`);
+                currentStationId = stationId;
+                requestedClientId = iTunesRadioClientId;
+
+                if (activatedClientId === iTunesRadioClientId) {
+                    fetchTrackData();
+                }
+            }
         });
+    } else {
+        await fetchTrackData();
+    }
+}
+
+/**
+ * Send error message to Discord view
+ *
+ * @param headline
+ * @param message
+ *
+ * @returns {Promise<void>}
+ */
+async function sendErrorToDiscord(headline, message) {
+    await discordSend(headline, message, currentStationName);
 }
 
 /**
@@ -65,63 +259,41 @@ function initializeRemoteDiscordClient() {
  * - Artist of current track
  * - Album of current track
  *
- * Additional data will be sent:
- * - Track total time
- * - Elapsed time (1)
- *
- * (1) Discord automatically continues the elapsed time until we send something new.
- *
  * TODO:
  * - show cover of album
- * - show current iTunes / Music version (already fetched)
  *
  * @returns {Promise<void>}
  */
 async function checkCurrentApplicationState() {
-    let trackName = await runAppleScript(`tell application "${applicationName}" to get name of current track`);
-    let artist = await runAppleScript(`tell application "${applicationName}" to get artist of current track`);
-    let album = await runAppleScript(`tell application "${applicationName}" to get album of current track`);
-    let current = JSON.stringify({trackName, artist, album});
+    let trackNameOrStationName = await runAppleScript(`tell application "${applicationName}" to get name of current track`);
+    let artistName = await runAppleScript(`tell application "${applicationName}" to get artist of current track`);
+    let albumName = await runAppleScript(`tell application "${applicationName}" to get album of current track`);
+    let current = JSON.stringify({trackName: trackNameOrStationName, artistName, albumName});
 
-    if (('' !== trackName && '' !== artist && '' !== album) && (current !== previous)) {
-        previous = current;
+    if (('' !== trackNameOrStationName && '' !== artistName && '' !== albumName) && (current !== previousPlaying)) {
+        requestedClientId = iTunesMusicClientId;
+        previousStreaming = '';
+        previousPlaying = current;
 
-        let start = await runAppleScript(`tell application "${applicationName}" to get player position`);
-        let end = await runAppleScript(`tell application "${applicationName}" to get time of current track`);
-        let now = Number(new Date());
+        await sendPlayingToDiscord(trackNameOrStationName, artistName, albumName);
+    } else {
+        previousPlaying = '';
 
-        let actualStart = now - (start * 1000);
-
-        console.log(`Now playing "${trackName}" from "${artist}" by "${album}"...`);
-
-        discordClient.setActivity({
-            details: `🎵  ${trackName} [${end}]`,
-            state: `👤  ${artist}`,
-            startTimestamp: actualStart,
-            largeImageKey: 'itunes',
-            largeImageText: `💿  ${album}`,
-            smallImageKey: 'github',
-            smallImageText: 'nimayneb/discord-itunes'
-        }).catch((error) => {
-            console.error(error);
-        });
-    } else if (trackName !== previous) {
-        previous = trackName;
-
-        console.log(`Now streaming "${trackName}"...`);
-
-        discordClient.setActivity({
-            details: `📻  ${trackName}`,
-            largeImageKey: 'itunes',
-            largeImageText: `💿  ${album}`,
-            smallImageKey: 'github',
-            smallImageText: 'nimayneb/discord-itunes'
-        }).catch((error) => {
-            console.error(error);
-        });
+        await fetchStation(trackNameOrStationName);
     }
 
     loggedIn = true;
+}
+
+/**
+ * Close the connection to discord
+ */
+function closeConnection() {
+    discordClient.destroy();
+
+    discordClient = initializeRemoteDiscordClient();
+    loggedIn = false;
+    previousPlaying = '';
 }
 
 /**
@@ -138,7 +310,15 @@ async function setActivity() {
     switch (playing) {
         case 'playing': {
             if (!loggedIn) {
-                discordClient.connect('695005084505079848').catch(console.error);
+                console.log(`Connecting Discord with application id "${activatedClientId}"...`)
+
+                discordClient.connect(activatedClientId).catch(console.error);
+            } else if (requestedClientId !== activatedClientId) {
+                console.log('Switching Discord connection...');
+
+                activatedClientId = requestedClientId;
+
+                closeConnection();
             } else {
                 await checkCurrentApplicationState();
             }
@@ -152,10 +332,7 @@ async function setActivity() {
             if (loggedIn) {
                 console.info('Nothing is played.');
 
-                await discordClient.destroy();
-                discordClient = initializeRemoteDiscordClient();
-                loggedIn = false;
-                previous = '';
+                closeConnection();
             }
         }
     }
@@ -163,14 +340,23 @@ async function setActivity() {
 
 /************************\
  *  Starts Application  *
-\************************/
+ \************************/
 
 const appleScript = require("applescript");
+const fetch = require('node-fetch');
+const iTunesMusicClientId = '695005084505079848';
+const iTunesRadioClientId = '702431764781465650';
+const radioApiKey = '6d3a0b9a08fd4b6dce0f49e9a72a972675d26a14';
 
-let applicationName = getNameOfItunes();
+let applicationName = getNameOfMusicApplication();
 let discordClient = initializeRemoteDiscordClient();
+let requestedClientId = iTunesMusicClientId;
+let currentStationName;
+let currentStationId;
+let activatedClientId = requestedClientId;
 
-let previous = '';
+let previousPlaying = '';
+let previousStreaming = '';
 let loggedIn = false;
 
 /**
@@ -185,9 +371,9 @@ runAppleScript(`version of app "${applicationName}"`).then((version) => {
      * Checks the activity of the application every second.
      * It's a good compromise for music timing (among us: nobody will notice).
      */
-    setActivity().then(() => {
-        setInterval(async () => {
+    setActivity().then(async () => {
+        await setInterval(async () => {
             await setActivity();
-        }, 1000);
+        }, 5000);
     });
 });
