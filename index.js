@@ -98,7 +98,7 @@ async function sendPlayingToDiscord(trackName, artistName, albumName) {
     let startTimestamp = now - (start * 1000);
 
     await discordSend(
-        `🎵 ${trackName} [${end}]`,
+        `🎵 ${trackName} [🕘 ${end}]`,
         `👤 ${artistName}`,
         `💿 ${albumName}`,
         startTimestamp
@@ -124,12 +124,12 @@ async function sendListeningToDiscord(trackName, artistName, albumName) {
     let imageText = `📻 ${currentStationName}`;
 
     if (albumName) {
-        imageText = albumName;
+        imageText = `💿 ${albumName}`;
     }
 
     console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}"...`);
 
-    await discordSend(`🎵 ${trackName}`,  `👤 ${artistName}`, `💿 ${imageText}`, startTimestamp);
+    await discordSend(`🎵 ${trackName}`,  `👤 ${artistName}`, imageText, startTimestamp);
 }
 
 /**
