@@ -105,6 +105,20 @@ async function checkCurrentApplicationState() {
         }).catch((error) => {
             console.error(error);
         });
+    } else if (trackName !== previous) {
+        previous = trackName;
+
+        console.log(`Now streaming "${trackName}"...`);
+
+        discordClient.setActivity({
+            details: `📻  ${trackName}`,
+            largeImageKey: 'itunes',
+            largeImageText: `💿  ${album}`,
+            smallImageKey: 'github',
+            smallImageText: 'nimayneb/discord-itunes'
+        }).catch((error) => {
+            console.error(error);
+        });
     }
 
     loggedIn = true;
