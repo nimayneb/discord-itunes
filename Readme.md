@@ -22,11 +22,14 @@ Usage:
 Features:
 ---------
 
-- Radio only: Shows artist, title and if available album too 
+- Radio only: Shows artist, title and if available album too
+- Radio only: Shows logo of current station if available (1) 
 - Music only: Shows artist, album, title w/ track time
 - Always: Shows current elapsed time
-- Sends activities to Discord on changes only
-- Disconnects from Discord if nothing is playing or streaming
+- Always: Sends activities to Discord on changes only
+- Always: Disconnects from Discord if nothing is playing or streaming
+
+(1) see https://gist.github.com/nimayneb/a0862efdf020c55b33b793134478bb70
 
 Appendix
 ========
