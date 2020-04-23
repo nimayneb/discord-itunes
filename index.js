@@ -89,7 +89,7 @@ async function fetchUrl(url) {
  * @returns {Promise<void>}
  */
 async function sendPlayingToDiscord(trackName, artistName, albumName) {
-    console.log(`Now playing "${trackName}" from "${artistName}" by "${albumName}"...`);
+    console.log(`Now playing "${trackName}" by "${artistName}" from "${albumName}"...`);
 
     let start = await runAppleScript(`tell application "${applicationName}" to get player position`);
     let end = await runAppleScript(`tell application "${applicationName}" to get time of current track`);
@@ -126,9 +126,9 @@ async function sendListeningToDiscord(trackName, artistName, albumName) {
     if (albumName) {
         imageText = `💿 ${albumName}`;
 
-        console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}" at "${currentStationName}"...`);
+        console.log(`Now listening "${trackName}" by "${artistName}" from "${albumName}" at "${currentStationName}"...`);
     } else {
-        console.log(`Now listening "${trackName}" from "${artistName}" at "${currentStationName}"...`);
+        console.log(`Now listening "${trackName}" by "${artistName}" at "${currentStationName}"...`);
     }
 
     await discordSend(`🎵 ${trackName}`, `👤 ${artistName}`, imageText, startTimestamp);
