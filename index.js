@@ -65,12 +65,12 @@ async function fetchUrl(url) {
     return await fetch(url, {redirect: 'manual'})
         .then(function (response) {
             if (200 !== response.status) {
-                throw new Error('not OK');
+                throw new Error(url);
             }
 
             return response.text();
         })
-        ;
+    ;
 }
 
 /**
@@ -125,9 +125,11 @@ async function sendListeningToDiscord(trackName, artistName, albumName) {
 
     if (albumName) {
         imageText = `💿 ${albumName}`;
-    }
 
-    console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}"...`);
+        console.log(`Now listening "${trackName}" from "${artistName}" by "${albumName}" at "${currentStationName}"...`);
+    } else {
+        console.log(`Now listening "${trackName}" from "${artistName}" at "${currentStationName}"...`);
+    }
 
     await discordSend(`🎵 ${trackName}`, `👤 ${artistName}`, imageText, startTimestamp);
 }
@@ -143,11 +145,21 @@ async function sendListeningToDiscord(trackName, artistName, albumName) {
  * @returns {Promise<void>}
  */
 async function discordSend(details, state, imageText, startTimestamp) {
+    let stationLogo = 'itunes';
+
+    if (currentStationName) {
+        let logo = getStationKeyName();
+
+        if (knownStations.includes(logo)) {
+            stationLogo = logo;
+        }
+    }
+
     await discordClient.setActivity({
         details: details,
         state: state,
         startTimestamp: startTimestamp,
-        largeImageKey: 'itunes',
+        largeImageKey: stationLogo,
         largeImageText: imageText,
         smallImageKey: 'github',
         smallImageText: 'nimayneb/discord-itunes'
@@ -204,6 +216,15 @@ async function fetchTrackData() {
 }
 
 /**
+ * Get station named key for "radio.net"
+ *
+ * @returns {string}
+ */
+function getStationKeyName() {
+    return currentStationName.replace(/[ _]/g, '').toLowerCase();
+}
+
+/**
  * Fetches information about the streaming station powered by "radio.net".
  *
  * Strategy: Grabs only "StationId" within JavaScript on Website (search for "var stationPage = { id: ... }").
@@ -216,7 +237,7 @@ async function fetchStation(stationName) {
     if (currentStationName !== stationName) {
         currentStationName = stationName;
 
-        let stationUrl = `https://www.radio.net/s/${stationName.replace(/[ _]/g, '').toLowerCase()}`;
+        let stationUrl = `https://www.radio.net/s/${getStationKeyName()}`;
 
         fetchUrl(stationUrl).then(await function (stationData) {
             let matches = stationData.replace(/\s/g, '|').match(
@@ -348,7 +369,10 @@ const fetch = require('node-fetch');
 const iTunesMusicClientId = '695005084505079848';
 const iTunesRadioClientId = '702431764781465650';
 const radioApiKey = '6d3a0b9a08fd4b6dce0f49e9a72a972675d26a14';
+const gistId = 'a0862efdf020c55b33b793134478bb70';
+const gistAssetId = '5222fe2065b76dfda01ae862c97f355ab10611fb/stations.json';
 
+let knownStations;
 let applicationName = getNameOfMusicApplication();
 let discordClient = initializeRemoteDiscordClient();
 let requestedClientId = iTunesMusicClientId;
@@ -369,13 +393,25 @@ let loggedIn = false;
 runAppleScript(`version of app "${applicationName}"`).then((version) => {
     console.log(`${applicationName} ${version}`);
 
-    /**
-     * Checks the activity of the application every second.
-     * It's a good compromise for music timing (among us: nobody will notice).
-     */
-    setActivity().then(async () => {
-        await setInterval(async () => {
-            await setActivity();
-        }, 5000);
-    });
+    fetchUrl(`https://gist.githubusercontent.com/nimayneb/${gistId}/raw/${gistAssetId}`)
+        .then((data) => {
+            try {
+                knownStations = JSON.parse(data);
+
+                console.log(`Loaded ${knownStations.length} station assets.`);
+            } catch (e) {
+                console.log(`!! Cannot load station assets !!`);
+            }
+
+            /**
+             * Checks the activity of the application every second.
+             * It's a good compromise for music timing (among us: nobody will notice).
+             */
+            setActivity().then(async () => {
+                await setInterval(async () => {
+                    await setActivity();
+                }, 5000);
+            });
+        })
+    ;
 });
