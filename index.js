@@ -98,7 +98,7 @@ async function sendPlayingToDiscord(trackName, artistName, albumName) {
     let startTimestamp = now - (start * 1000);
 
     await discordSend(
-        `🎵 ${trackName} 🕘${end}`,
+        `🎵 ${trackName} 🕘 ${end}`,
         `👤 ${artistName}`,
         `💿 ${albumName}`,
         startTimestamp
@@ -173,7 +173,10 @@ async function discordSend(details, state, imageText, startTimestamp) {
  *
  * Strategy: Uses the JSON-API from "radio.net" and gets the only streaming track.
  *
- * GET: https://api.radio.net/info/v2/search/nowplaying ? apikey=...& numberoftitles=1 & station= ...
+ * GET: https://api.radio.net/info/v2/search/nowplaying
+ * URI: apikey=...
+ *      numberoftitles=1
+ *      station=...
  * [
  *   {
  *             songName: use it for view in "details"
@@ -235,19 +238,20 @@ function getStationKeyName() {
  */
 async function fetchStation(stationName) {
     if (currentStationName !== stationName) {
-        currentStationName = stationName;
-
         let stationUrl = `https://www.radio.net/s/${getStationKeyName()}`;
 
         fetchUrl(stationUrl).then(await function (stationData) {
             let matches = stationData.replace(/\s/g, '|').match(
                 /var\|+stationPage\|*=\|*\{.*[\\,]?id:\|*'(?<stationId>[0-9]+)'.*};/
             );
+
             let stationId = matches[1];
 
             if (stationId) {
                 console.log(`Listening streaming broadcast "${stationName}"...`);
+
                 currentStationId = stationId;
+                currentStationName = stationName;
                 requestedClientId = iTunesRadioClientId;
 
                 if (activatedClientId === iTunesRadioClientId) {
