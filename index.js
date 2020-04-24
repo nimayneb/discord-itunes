@@ -148,11 +148,7 @@ async function discordSend(details, state, imageText, startTimestamp) {
     let stationLogo = 'itunes';
 
     if (currentStationName) {
-        let logo = getStationKeyName();
-
-        if (knownStations.includes(logo)) {
-            stationLogo = logo;
-        }
+        stationLogo = getStationKeyName(currentStationName);
     }
 
     await discordClient.setActivity({
@@ -162,7 +158,7 @@ async function discordSend(details, state, imageText, startTimestamp) {
         largeImageKey: stationLogo,
         largeImageText: imageText,
         smallImageKey: 'github',
-        smallImageText: 'nimayneb/discord-itunes'
+        smallImageText: `nimayneb/discord-itunes (${packageJson.version})`
     }).catch((error) => {
         console.error(error);
     });
@@ -221,10 +217,10 @@ async function fetchTrackData() {
 /**
  * Get station named key for "radio.net"
  *
- * @returns {string}
+ * @returns {string|null}
  */
-function getStationKeyName(rawName) {
-    return rawName.replace(/[ _]/g, '').toLowerCase();
+function getStationKeyName(stationName) {
+    return (stationName in knownStations) ? knownStations[stationName] : stationName;
 }
 
 /**
@@ -262,18 +258,6 @@ async function fetchStation(stationName) {
     } else if (currentStationId) {
         await fetchTrackData();
     }
-}
-
-/**
- * Send error message to Discord view
- *
- * @param headline
- * @param message
- *
- * @returns {Promise<void>}
- */
-async function sendErrorToDiscord(headline, message) {
-    await discordSend(headline, message, currentStationName);
 }
 
 /**
@@ -373,10 +357,11 @@ const fetch = require('node-fetch');
 const iTunesMusicClientId = '695005084505079848';
 const iTunesRadioClientId = '702431764781465650';
 const radioApiKey = '6d3a0b9a08fd4b6dce0f49e9a72a972675d26a14';
-const gistId = 'a0862efdf020c55b33b793134478bb70';
-const gistAssetId = '5222fe2065b76dfda01ae862c97f355ab10611fb/stations.json';
+const gistId = 'f9f51af6dd8ed7c52959da38c2f93af7';
+const gistAssetId = '64b9ec9bf98fa40f6fab58e7083af85721de8cea';
 
 let knownStations;
+let packageJson = require('./package.json');
 let applicationName = getNameOfMusicApplication();
 let discordClient = initializeRemoteDiscordClient();
 let requestedClientId = iTunesMusicClientId;
@@ -397,7 +382,7 @@ let loggedIn = false;
 runAppleScript(`version of app "${applicationName}"`).then((version) => {
     console.log(`${applicationName} ${version}`);
 
-    fetchUrl(`https://gist.githubusercontent.com/nimayneb/${gistId}/raw/${gistAssetId}`)
+    fetchUrl(`https://gist.githubusercontent.com/nimayneb/${gistId}/raw/${gistAssetId}/stations.v2.json`)
         .then((data) => {
             try {
                 knownStations = JSON.parse(data);
