@@ -162,7 +162,7 @@ async function discordSend(details, state, imageText, startTimestamp) {
         largeImageKey: stationLogo,
         largeImageText: imageText,
         smallImageKey: 'github',
-        smallImageText: 'nimayneb/discord-itunes'
+        smallImageText: `nimayneb/discord-itunes (${packageJson.version})`
     }).catch((error) => {
         console.error(error);
     });
@@ -377,6 +377,7 @@ const gistId = 'a0862efdf020c55b33b793134478bb70';
 const gistAssetId = '5222fe2065b76dfda01ae862c97f355ab10611fb/stations.json';
 
 let knownStations;
+let packageJson = require('package.json');
 let applicationName = getNameOfMusicApplication();
 let discordClient = initializeRemoteDiscordClient();
 let requestedClientId = iTunesMusicClientId;
