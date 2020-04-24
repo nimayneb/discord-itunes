@@ -223,8 +223,8 @@ async function fetchTrackData() {
  *
  * @returns {string}
  */
-function getStationKeyName() {
-    return currentStationName.replace(/[ _]/g, '').toLowerCase();
+function getStationKeyName(rawName) {
+    return rawName.replace(/[ _]/g, '').toLowerCase();
 }
 
 /**
@@ -238,7 +238,7 @@ function getStationKeyName() {
  */
 async function fetchStation(stationName) {
     if (currentStationName !== stationName) {
-        let stationUrl = `https://www.radio.net/s/${getStationKeyName()}`;
+        let stationUrl = `https://www.radio.net/s/${getStationKeyName(stationName)}`;
 
         fetchUrl(stationUrl).then(await function (stationData) {
             let matches = stationData.replace(/\s/g, '|').match(
