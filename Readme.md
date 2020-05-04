@@ -29,7 +29,7 @@ Features:
 - Always: Sends activities to Discord on changes only
 - Always: Disconnects from Discord if nothing is playing or streaming
 
-(1) see https://gist.github.com/nimayneb/a0862efdf020c55b33b793134478bb70
+(1) see https://gist.github.com/nimayneb/f9f51af6dd8ed7c52959da38c2f93af7
 
 Appendix
 ========
