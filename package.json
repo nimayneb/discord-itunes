@@ -1,6 +1,6 @@
 {
   "name": "discord-itunes",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Tell all your Discord friends what you hear on iTunes.",
   "main": "index.js",
   "keywords": [

@@ -382,14 +382,17 @@ let loggedIn = false;
 runAppleScript(`version of app "${applicationName}"`).then((version) => {
     console.log(`${applicationName} ${version}`);
 
-    fetchUrl(`https://gist.githubusercontent.com/nimayneb/${gistId}/raw/${gistAssetId}/stations.v2.json`)
+    let stationUrl = `https://gist.githubusercontent.com/nimayneb/${gistId}/raw/${gistAssetId}/stations.v2.json`;
+
+    fetchUrl(stationUrl)
         .then((data) => {
             try {
                 knownStations = JSON.parse(data);
 
-                console.log(`Loaded ${knownStations.length} station assets.`);
+                console.log(`Loaded ${Object.keys(knownStations).length} station assets`);
             } catch (e) {
                 console.log(`!! Cannot load station assets !!`);
+                console.log(e.message);
             }
 
             /**
